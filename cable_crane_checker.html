@@ -189,7 +189,6 @@
   </div>
 </div>
 </div>
-</div><!-- /wrap -->
 <div class="tab-bar" id="tabBar">
   <button class="tab-btn active" id="tabInput" onclick="switchTab('input')">
     <span class="tab-icon">✏️</span>入力
@@ -213,6 +212,8 @@ function switchTab(tab){
   } else {
     res.classList.add('active');inp.classList.remove('active');
     tR.classList.add('active');tI.classList.remove('active');
+    // グラフを再描画（display:none→block 後に必要）
+    if(sfChart){setTimeout(()=>sfChart.resize(),50);}
   }
 }
 // 初期化: 画面幅に応じてデフォルトタブを設定
@@ -231,9 +232,7 @@ window.addEventListener('resize',()=>{
     inp.classList.add('active');
   }
 });
-document.addEventListener('DOMContentLoaded',()=>{
-  initTabs();
-});
+
 
 </script>
 <script>
@@ -294,7 +293,7 @@ function initChart(){
   sfChart=new Chart(ctx,{
     type:'bar',
     data:{labels:['主索 Y18','巻上索 Y32','横行索 Y45'],datasets:[{data:[0,0,0],borderRadius:4}]},
-    options:{responsive:true,animation:{duration:150},
+    options:{responsive:false,animation:{duration:150},maintainAspectRatio:false,
       plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw.toFixed(4)}}},
       scales:{y:{min:0,max:8,ticks:{font:{size:10}}},x:{ticks:{font:{size:10}}}}}});
 }
@@ -457,6 +456,7 @@ function setupRope(n,defDiam,defConst,defKind){
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
+  initTabs();
   initChart();
   // 一般入力の変更検知
   document.querySelectorAll('#xl,#hh,#hd,#s,#wy,#wc,#mm,#mo,#so,#v,#zl,#zm').forEach(el=>{

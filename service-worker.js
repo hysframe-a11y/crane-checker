@@ -1,7 +1,7 @@
 // ケーブルクレーン安全率チェッカー Service Worker
 // キャッシュ戦略: Cache First（オフライン優先）
 
-const CACHE_NAME = 'crane-checker-v1';
+const CACHE_NAME = 'crane-checker-v2';
 
 // オフラインで使うファイル一覧
 const ASSETS = [
