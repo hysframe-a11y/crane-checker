@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+
+
+
+<meta name="theme-color" content="#1a3a6b">
+
+
+<title>ケーブルクレーン安全率チェッカー</title>
+</head>
+<body>
+<h2 class="sr-only">ケーブルクレーン安全率チェッカー v3 径→構成→種別連動</h2>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+.wrap{display:flex;height:100vh;overflow:hidden;font-family:'Segoe UI',sans-serif;font-size:12px;background:var(--surface-0)}
+.left{width:280px;min-width:250px;overflow-y:auto;background:var(--surface-2);border-right:1.5px solid #1a3a6b;padding:10px 12px;flex-shrink:0}
+.right{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:9px}
+.logo{font-size:13px;font-weight:500;color:#1a3a6b;margin-bottom:8px}
+.sh{font-size:10px;font-weight:500;color:#fff;background:#1a3a6b;padding:3px 8px;border-radius:3px;margin:8px 0 5px}
+.field{margin-bottom:5px}
+.field label{display:block;font-size:10px;color:var(--text-secondary);margin-bottom:1px}
+.field-row{display:flex;gap:4px;align-items:center}
+.field input,.field select{flex:1;padding:4px 6px;border:1px solid var(--border-strong);border-radius:4px;font-size:11px;font-family:monospace;background:var(--surface-2);color:var(--text-primary);width:100%}
+.unit{font-size:10px;color:var(--text-muted);white-space:nowrap}
+.auto-field{background:var(--surface-1)!important;color:var(--text-secondary)!important;cursor:default}
+.rope-spec{font-size:10px;background:#e8eef6;border-radius:4px;padding:4px 7px;margin:3px 0 4px;color:#1a3a6b;line-height:1.7;border-left:3px solid #1a3a6b;white-space:pre-line;min-height:32px}
+.na-warn{color:#cc0000;font-size:10px;margin-top:2px;min-height:14px}
+.card{background:var(--surface-2);border-radius:8px;border:.5px solid var(--border);padding:10px 12px}
+.card-b{border:1.5px solid #1a3a6b}
+.ct{font-size:11px;font-weight:500;color:#1a3a6b;margin-bottom:7px}
+.sf-row{margin-bottom:11px}
+.sf-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px}
+.sf-lb{font-size:12px;font-weight:500;color:var(--text-primary)}
+.sf-badge{font-size:11px;font-weight:700;padding:1px 10px;border-radius:20px}
+.sf-ok{color:#1a6b1a;background:#e6f4ea}
+.sf-out{color:#cc0000;background:#fce8e6}
+.bar-track{position:relative;height:15px;background:var(--surface-1);border-radius:8px;overflow:visible}
+.bar-fill{position:absolute;left:0;top:0;height:100%;border-radius:8px;transition:width .25s}
+.bar-ok{background:linear-gradient(90deg,#52a052,#1a6b1a)}
+.bar-out{background:linear-gradient(90deg,#e05050,#cc0000)}
+.bar-mark{position:absolute;top:-3px;width:2px;height:21px;background:#1a3a6b;border-radius:1px}
+.bar-mark-label{position:absolute;top:-15px;font-size:9px;font-weight:700;color:#1a3a6b;white-space:nowrap}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.rrow{display:flex;justify-content:space-between;align-items:baseline;padding:2px 4px;border-bottom:.5px solid var(--border)}
+.rhl{background:#e8eef6}
+.rl{font-size:10px;color:var(--text-secondary)}
+.rv{font-size:11px;font-family:monospace;color:#1a3a6b;font-weight:600}
+.ru{font-size:9px;color:var(--text-muted);margin-left:2px}
+.verdict{text-align:center;font-weight:700;font-size:12px;padding:6px;border-radius:5px;margin-top:7px}
+.v-ok{color:#1a6b1a;background:#e6f4ea}
+.v-out{color:#cc0000;background:#fce8e6}
+.snr{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;padding:3px 6px;border-radius:4px}
+.snv{font-size:12px;font-family:monospace;font-weight:700}
+
+/* ── モバイル対応 ── */
+.tab-bar{display:none}
+@media(max-width:767px){
+  .wrap{flex-direction:column;height:100vh}
+  .left{width:100%;min-width:unset;border-right:none;border-bottom:1.5px solid #1a3a6b;
+        padding:8px 12px;overflow-y:auto;flex:1;display:none}
+  .left.active{display:block}
+  .right{padding:8px 10px;flex:1;overflow-y:auto;display:none}
+  .right.active{display:block}
+  .tab-bar{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:100;
+            background:#1a3a6b;height:52px}
+  .tab-btn{flex:1;border:none;background:transparent;color:rgba(255,255,255,.6);
+            font-size:11px;font-family:'Segoe UI',sans-serif;cursor:pointer;
+            display:flex;flex-direction:column;align-items:center;justify-content:center;
+            gap:2px;transition:color .2s}
+  .tab-btn.active{color:#fff;border-top:2px solid #fff}
+  .tab-icon{font-size:18px;line-height:1}
+  /* タブバー分の余白 */
+  .left,.right{padding-bottom:60px}
+  /* カードを1列に */
+  .g3{grid-template-columns:1fr!important}
+  .g2{grid-template-columns:1fr!important}
+  /* フォントサイズ調整 */
+  .field input,.field select{font-size:14px;padding:6px 8px}
+  .rv{font-size:13px}
+  .sf-badge{font-size:12px}
+}
+</style>
+<div class="wrap" id="mainWrap">
+<div class="left" id="paneInput">
+  <div class="logo">ケーブルクレーン安全率チェック <span style="font-size:10px;color:#888;font-weight:400">v3</span></div>
+  <div class="sh">装置の等級</div>
+  <div class="field"><label>等級</label>
+  <select id="grade"><option value="3.55">A（SF≧3.55）</option><option value="4.0">B（SF≧4.0）</option><option value="4.5">C（SF≧4.5）</option><option value="5.0">D/E/F（SF≧5.0）</option></select></div>
+  <div class="sh">支間・地形</div>
+  <div class="field"><label>支間水平距離 XL</label><div class="field-row"><input type="number" id="xl" value="214.3" step="0.1"><span class="unit">m</span></div></div>
+  <div class="field"><label>支間高低差 HH</label><div class="field-row"><input type="number" id="hh" value="68.4" step="0.1"><span class="unit">m</span></div></div>
+  <div class="field"><label>揚程 HD</label><div class="field-row"><input type="number" id="hd" value="22" step="1"><span class="unit">m</span></div></div>
+  <div class="field"><label>中央垂下比 S</label><div class="field-row"><input type="number" id="s" value="0.06" step="0.01"></div></div>
+  <div class="sh">荷重</div>
+  <div class="field"><label>吊上げ荷重 WY</label><div class="field-row"><input type="number" id="wy" value="2.9" step="0.1"><span class="unit">ton</span></div></div>
+  <div class="field"><label>フック重量 WC</label><div class="field-row"><input type="number" id="wc" value="0.1" step="0.1"><span class="unit">ton</span></div></div>
+  <div class="sh">ウインチ・索条件</div>
+  <div class="field"><label>巻掛数 MM</label><div class="field-row"><input type="number" id="mm" value="2" step="1" min="1"></div></div>
+  <div class="field"><label>横行索巻掛数 MO</label><div class="field-row"><input type="number" id="mo" value="1" step="1" min="1"></div></div>
+  <div class="field"><label>横行索垂下比 SO</label><div class="field-row"><input type="number" id="so" value="0.06" step="0.01"></div></div>
+  <div class="field"><label>ウインチ位置</label><select id="ui"><option>上部</option><option>下部</option></select></div>
+  <div class="field"><label>横行速度 V</label><div class="field-row"><input type="number" id="v" value="80" step="1"><span class="unit">m/min</span></div></div>
+  <div class="field"><label>摩擦係数 ZL</label><div class="field-row"><input type="number" id="zl" value="0.05" step="0.01"></div></div>
+  <div class="field"><label>機械効率 ZM</label><div class="field-row"><input type="number" id="zm" value="0.64" step="0.01"></div></div>
+  <div class="sh">主索</div>
+  <div class="field"><label>① 径</label><div class="field-row"><select id="diam40"></select><span class="unit">mm</span></div></div>
+  <div class="field"><label>② 構成</label><select id="const40"></select></div>
+  <div class="field"><label>③ 種別（自動）</label><select id="kind40"></select></div>
+  <div class="rope-spec" id="spec40">—</div>
+  <div class="field"><label>無風単重（自動）</label><div class="field-row"><input class="auto-field" id="q40" readonly><span class="unit">kg/m</span></div></div>
+  <div class="field"><label>破断荷重（自動）</label><div class="field-row"><input class="auto-field" id="p40" readonly><span class="unit">ton</span></div></div>
+  <div class="na-warn" id="warn40"></div>
+  <div class="sh">巻上索</div>
+  <div class="field"><label>① 径</label><div class="field-row"><select id="diam41"></select><span class="unit">mm</span></div></div>
+  <div class="field"><label>② 構成</label><select id="const41"></select></div>
+  <div class="field"><label>③ 種別（自動）</label><select id="kind41"></select></div>
+  <div class="rope-spec" id="spec41">—</div>
+  <div class="field"><label>無風単重（自動）</label><div class="field-row"><input class="auto-field" id="q41" readonly><span class="unit">kg/m</span></div></div>
+  <div class="field"><label>破断荷重（自動）</label><div class="field-row"><input class="auto-field" id="p41" readonly><span class="unit">ton</span></div></div>
+  <div class="na-warn" id="warn41"></div>
+  <div class="sh">横行索</div>
+  <div class="field"><label>① 径</label><div class="field-row"><select id="diam42"></select><span class="unit">mm</span></div></div>
+  <div class="field"><label>② 構成</label><select id="const42"></select></div>
+  <div class="field"><label>③ 種別（自動）</label><select id="kind42"></select></div>
+  <div class="rope-spec" id="spec42">—</div>
+  <div class="field"><label>無風単重（自動）</label><div class="field-row"><input class="auto-field" id="q42" readonly><span class="unit">kg/m</span></div></div>
+  <div class="field"><label>破断荷重（自動）</label><div class="field-row"><input class="auto-field" id="p42" readonly><span class="unit">ton</span></div></div>
+  <div class="na-warn" id="warn42"></div>
+</div>
+<div class="right" id="paneResult">
+  <div class="card card-b">
+    <div class="ct">安全率の判定 <span id="grade-label" style="font-weight:400;color:var(--text-secondary)"></span></div>
+    <div class="sf-row"><div class="sf-head"><span class="sf-lb">主索　Y18</span><span class="sf-badge" id="b18">-</span></div><div class="bar-track"><div class="bar-fill" id="bf18"></div><div class="bar-mark" id="bm18"><span class="bar-mark-label" id="bml18"></span></div></div></div>
+    <div class="sf-row"><div class="sf-head"><span class="sf-lb">巻上索 Y32</span><span class="sf-badge" id="b32">-</span></div><div class="bar-track"><div class="bar-fill" id="bf32"></div><div class="bar-mark" id="bm32"><span class="bar-mark-label" id="bml32"></span></div></div></div>
+    <div class="sf-row" style="margin-bottom:0"><div class="sf-head"><span class="sf-lb">横行索 Y45</span><span class="sf-badge" id="b45">-</span></div><div class="bar-track"><div class="bar-fill" id="bf45"></div><div class="bar-mark" id="bm45"><span class="bar-mark-label" id="bml45"></span></div></div></div>
+  </div>
+  <div class="card"><div class="ct">安全率グラフ</div><canvas id="sfChart" height="120"></canvas></div>
+  <div class="g3">
+    <div class="card"><div class="ct">速度圧・風込単重</div>
+      <div class="rrow"><span class="rl">傾斜角 AL</span><span class="rv" id="rAL">-</span><span class="ru">°</span></div>
+      <div class="rrow"><span class="rl">斜距離 YL</span><span class="rv" id="rYL">-</span><span class="ru">m</span></div>
+      <div class="rrow"><span class="rl">作業時 QN</span><span class="rv" id="rQN">-</span><span class="ru">kg/m²</span></div>
+      <div class="rrow"><span class="rl">停止時 QE</span><span class="rv" id="rQE">-</span><span class="ru">kg/m²</span></div>
+      <div class="rrow"><span class="rl">主索 W1</span><span class="rv" id="rW1">-</span><span class="ru">kg/m</span></div>
+      <div class="rrow"><span class="rl">巻上索 W2</span><span class="rv" id="rW2">-</span><span class="ru">kg/m</span></div>
+      <div class="rrow"><span class="rl">横行索 W3</span><span class="rv" id="rW3">-</span><span class="ru">kg/m</span></div>
+    </div>
+    <div class="card"><div class="ct">荷重・比率</div>
+      <div class="rrow"><span class="rl">垂直荷重 QV</span><span class="rv" id="rQV">-</span><span class="ru">ton</span></div>
+      <div class="rrow"><span class="rl">風込主索重量 WS</span><span class="rv" id="rWS">-</span><span class="ru">ton</span></div>
+      <div class="rrow"><span class="rl">風込諸索重量 PT</span><span class="rv" id="rPT">-</span><span class="ru">ton</span></div>
+      <div class="rrow"><span class="rl">荷重比 XN</span><span class="rv" id="rXN">-</span></div>
+      <div class="rrow"><span class="rl">諸索重量比 RO</span><span class="rv" id="rRO">-</span></div>
+      <div class="rrow"><span class="rl">負荷係数 GS</span><span class="rv" id="rGS">-</span></div>
+      <div class="rrow"><span class="rl">原索垂下比 SS</span><span class="rv" id="rSS">-</span></div>
+    </div>
+    <div class="card"><div class="ct">主索張力チェーン</div>
+      <div class="rrow"><span class="rl">上支点角 SA</span><span class="rv" id="rSA">-</span><span class="ru">°</span></div>
+      <div class="rrow rhl"><span class="rl">上支点全張力 ZA</span><span class="rv" id="rZA">-</span><span class="ru">ton</span></div>
+      <div class="rrow rhl"><span class="rl">巻上索張力 TM</span><span class="rv" id="rTM">-</span><span class="ru">ton</span></div>
+      <div class="rrow"><span class="rl">基礎張力 TOO</span><span class="rv" id="rTOO">-</span><span class="ru">ton</span></div>
+      <div class="rrow"><span class="rl">諸索合力 ZS</span><span class="rv" id="rZS">-</span><span class="ru">ton</span></div>
+      <div class="rrow rhl"><span class="rl">主索張力 TS</span><span class="rv" id="rTS">-</span><span class="ru">ton</span></div>
+      <div class="rrow rhl"><span class="rl">横行索張力 TO</span><span class="rv" id="rTO">-</span><span class="ru">ton</span></div>
+    </div>
+  </div>
+  <div class="g2">
+    <div class="card"><div class="ct">下支点・横行</div>
+      <div class="rrow"><span class="rl">下支点角 SB</span><span class="rv" id="rSB">-</span><span class="ru">°</span></div>
+      <div class="rrow"><span class="rl">下支点全張力 ZB</span><span class="rv" id="rZB">-</span><span class="ru">ton</span></div>
+      <div class="rrow"><span class="rl">下支点主索張力 TSB</span><span class="rv" id="rTSB">-</span><span class="ru">ton</span></div>
+      <div class="rrow"><span class="rl">軌跡角 BT</span><span class="rv" id="rBT">-</span><span class="ru">°</span></div>
+      <div class="rrow"><span class="rl">牽引力 TP</span><span class="rv" id="rTP">-</span><span class="ru">ton</span></div>
+      <div class="rrow"><span class="rl">牽引抵抗 TR</span><span class="rv" id="rTR">-</span><span class="ru">ton</span></div>
+    </div>
+    <div class="card card-b"><div class="ct">安全率（数値）</div>
+      <div class="snr" id="nr18"><span style="font-size:11px">主索 Y18</span><span class="snv" id="nv18">-</span></div>
+      <div class="snr" id="nr32"><span style="font-size:11px">巻上索 Y32</span><span class="snv" id="nv32">-</span></div>
+      <div class="snr" id="nr45"><span style="font-size:11px">横行索 Y45</span><span class="snv" id="nv45">-</span></div>
+      <div class="rrow rhl" style="margin-top:4px"><span class="rl">巻上ウインチ kW</span><span class="rv" id="rKWH">-</span><span class="ru">kW</span></div>
+      <div class="rrow rhl"><span class="rl">横行ウインチ kW</span><span class="rv" id="rKWT">-</span><span class="ru">kW</span></div>
+      <div class="verdict" id="verd">—</div>
+    </div>
+  </div>
+</div>
+</div>
+<div class="tab-bar" id="tabBar">
+  <button class="tab-btn active" id="tabInput" onclick="switchTab('input')">
+    <span class="tab-icon">✏️</span>入力
+  </button>
+  <button class="tab-btn" id="tabResult" onclick="switchTab('result')">
+    <span class="tab-icon">📊</span>結果
+  </button>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js">
+// ── タブ切り替え（スマホ用）──
+function switchTab(tab){
+  const isMobile=window.innerWidth<768;
+  if(!isMobile)return;
+  const inp=document.getElementById('paneInput');
+  const res=document.getElementById('paneResult');
+  const tI=document.getElementById('tabInput');
+  const tR=document.getElementById('tabResult');
+  if(tab==='input'){
+    inp.classList.add('active');res.classList.remove('active');
+    tI.classList.add('active');tR.classList.remove('active');
+  } else {
+    res.classList.add('active');inp.classList.remove('active');
+    tR.classList.add('active');tI.classList.remove('active');
+    // グラフを再描画（display:none→block 後に必要）
+    if(sfChart){setTimeout(()=>sfChart.resize(),50);}
+  }
+}
+// 初期化: 画面幅に応じてデフォルトタブを設定
+function initTabs(){
+  if(window.innerWidth<768){
+    document.getElementById('paneInput').classList.add('active');
+    document.getElementById('tabInput').classList.add('active');
+  }
+}
+window.addEventListener('resize',()=>{
+  const isMobile=window.innerWidth<768;
+  const inp=document.getElementById('paneInput');
+  const res=document.getElementById('paneResult');
+  if(!isMobile){inp.classList.remove('active');res.classList.remove('active');}
+  else if(!inp.classList.contains('active')&&!res.classList.contains('active')){
+    inp.classList.add('active');
+  }
+});
+
+
+</script>
+<script>
+const ROPE_DB = {"4*Ｆ（40）":{"kinds":["特"],"diams":[8.0,9.0,10.0,11.2,12.0,12.5,14.0,16.0,18.0,20.0,22.0,22.4,24.0,25.0,26.0,28.0,30.0,31.5,32.0,33.5,34.0,35.5,36.0,37.5,38.0,40.0,42.5],"data":{"8.0":{"G":null,"A":null,"B":null,"特":4.75,"単重":0.258},"9.0":{"G":null,"A":null,"B":null,"特":6.01,"単重":0.327},"10.0":{"G":null,"A":null,"B":null,"特":7.42,"単重":0.403},"11.2":{"G":null,"A":null,"B":null,"特":9.3,"単重":0.506},"12.0":{"G":null,"A":null,"B":null,"特":10.7,"単重":0.581},"12.5":{"G":null,"A":null,"B":null,"特":11.6,"単重":0.63},"14.0":{"G":null,"A":null,"B":null,"特":14.5,"単重":0.79},"16.0":{"G":null,"A":null,"B":null,"特":19.0,"単重":1.03},"18.0":{"G":null,"A":null,"B":null,"特":24.0,"単重":1.31},"20.0":{"G":null,"A":null,"B":null,"特":29.7,"単重":1.61},"22.0":{"G":null,"A":null,"B":null,"特":35.9,"単重":1.95},"22.4":{"G":null,"A":null,"B":null,"特":37.2,"単重":2.02},"24.0":{"G":null,"A":null,"B":null,"特":42.7,"単重":2.32},"25.0":{"G":null,"A":null,"B":null,"特":46.4,"単重":2.52},"26.0":{"G":null,"A":null,"B":null,"特":50.1,"単重":2.73},"28.0":{"G":null,"A":null,"B":null,"特":58.1,"単重":3.16},"30.0":{"G":null,"A":null,"B":null,"特":66.7,"単重":3.63},"31.5":{"G":null,"A":null,"B":null,"特":73.6,"単重":4.0},"32.0":{"G":null,"A":null,"B":null,"特":75.9,"単重":4.13},"33.5":{"G":null,"A":null,"B":null,"特":83.2,"単重":4.52},"34.0":{"G":null,"A":null,"B":null,"特":85.7,"単重":4.66},"35.5":{"G":null,"A":null,"B":null,"特":93.5,"単重":5.08},"36.0":{"G":null,"A":null,"B":null,"特":96.1,"単重":5.23},"37.5":{"G":null,"A":null,"B":null,"特":104.0,"単重":5.67},"38.0":{"G":null,"A":null,"B":null,"特":107.0,"単重":5.82},"40.0":{"G":null,"A":null,"B":null,"特":119.0,"単重":6.45},"42.5":{"G":null,"A":null,"B":null,"特":134.0,"単重":7.28}}},"6*19":{"kinds":["A"],"diams":[4.0,5.0,6.0,6.3,8.0,9.0,10.0,11.2,12.0,12.5,14.0,16.0,18.0,20.0,22.0,22.4,24.0,25.0,28.0,30.0,31.5,32.0,33.5,34.0,35.5,36.0,37.5,38.0,40.0,42.0,42.5,44.0,45.0,46.0,47.5,48.0,50.0],"data":{"4.0":{"G":null,"A":0.88,"B":null,"特":null,"単重":0.058},"5.0":{"G":null,"A":1.38,"B":null,"特":null,"単重":0.091},"6.0":{"G":null,"A":1.98,"B":null,"特":null,"単重":0.131},"6.3":{"G":null,"A":2.19,"B":null,"特":null,"単重":0.144},"8.0":{"G":null,"A":3.53,"B":null,"特":null,"単重":0.233},"9.0":{"G":null,"A":4.46,"B":null,"特":null,"単重":0.295},"10.0":{"G":null,"A":5.51,"B":null,"特":null,"単重":0.364},"11.2":{"G":null,"A":6.91,"B":null,"特":null,"単重":0.457},"12.0":{"G":null,"A":7.93,"B":null,"特":null,"単重":0.524},"12.5":{"G":null,"A":8.61,"B":null,"特":null,"単重":0.569},"14.0":{"G":null,"A":10.8,"B":null,"特":null,"単重":0.713},"16.0":{"G":null,"A":14.1,"B":null,"特":null,"単重":0.932},"18.0":{"G":null,"A":17.8,"B":null,"特":null,"単重":1.18},"20.0":{"G":null,"A":22.0,"B":null,"特":null,"単重":1.46},"22.0":{"G":null,"A":26.6,"B":null,"特":null,"単重":1.76},"22.4":{"G":null,"A":27.6,"B":null,"特":null,"単重":1.83},"24.0":{"G":null,"A":31.7,"B":null,"特":null,"単重":2.1},"25.0":{"G":null,"A":34.4,"B":null,"特":null,"単重":2.28},"28.0":{"G":null,"A":43.2,"B":null,"特":null,"単重":2.85},"30.0":{"G":null,"A":49.6,"B":null,"特":null,"単重":3.28},"31.5":{"G":null,"A":54.6,"B":null,"特":null,"単重":3.61},"32.0":{"G":null,"A":56.3,"B":null,"特":null,"単重":3.37},"33.5":{"G":null,"A":61.7,"B":null,"特":null,"単重":4.08},"34.0":{"G":null,"A":63.6,"B":null,"特":null,"単重":4.21},"35.5":{"G":null,"A":69.3,"B":null,"特":null,"単重":4.59},"36.0":{"G":null,"A":71.3,"B":null,"特":null,"単重":4.72},"37.5":{"G":null,"A":77.3,"B":null,"特":null,"単重":5.12},"38.0":{"G":null,"A":79.4,"B":null,"特":null,"単重":5.26},"40.0":{"G":null,"A":88.0,"B":null,"特":null,"単重":5.82},"42.0":{"G":null,"A":97.0,"B":null,"特":null,"単重":6.42},"42.5":{"G":null,"A":99.3,"B":null,"特":null,"単重":6.57},"44.0":{"G":null,"A":106.0,"B":null,"特":null,"単重":7.05},"45.0":{"G":null,"A":111.0,"B":null,"特":null,"単重":7.37},"46.0":{"G":null,"A":116.0,"B":null,"特":null,"単重":7.7},"47.5":{"G":null,"A":124.0,"B":null,"特":null,"単重":8.21},"48.0":{"G":null,"A":127.0,"B":null,"特":null,"単重":8.39},"50.0":{"G":null,"A":138.0,"B":null,"特":null,"単重":9.1}}},"6*24":{"kinds":["A"],"diams":[6.0,6.3,8.0,9.0,10.0,11.2,12.0,12.5,14.0,16.0,18.0,20.0,22.0,22.4,24.0,25.0,28.0,30.0,31.5,32.0,33.5,34.0,35.5,36.0,37.5,38.0,40.0,42.0,42.5,44.0,45.0,46.0,47.5,48.0,50.0,52.0,53.0,54.0,56.0,58.0,60.0,62.0,63.0],"data":{"6.0":{"G":null,"A":1.81,"B":null,"特":null,"単重":0.12},"6.3":{"G":null,"A":2.0,"B":null,"特":null,"単重":0.132},"8.0":{"G":null,"A":3.22,"B":null,"特":null,"単重":0.212},"9.0":{"G":null,"A":4.07,"B":null,"特":null,"単重":0.269},"10.0":{"G":null,"A":5.03,"B":null,"特":null,"単重":0.332},"11.2":{"G":null,"A":6.31,"B":null,"特":null,"単重":0.416},"12.0":{"G":null,"A":7.24,"B":null,"特":null,"単重":0.478},"12.5":{"G":null,"A":7.85,"B":null,"特":null,"単重":0.519},"14.0":{"G":null,"A":9.85,"B":null,"特":null,"単重":0.651},"16.0":{"G":null,"A":12.9,"B":null,"特":null,"単重":0.85},"18.0":{"G":null,"A":16.3,"B":null,"特":null,"単重":1.08},"20.0":{"G":null,"A":20.1,"B":null,"特":null,"単重":1.33},"22.0":{"G":null,"A":24.3,"B":null,"特":null,"単重":1.61},"22.4":{"G":null,"A":25.2,"B":null,"特":null,"単重":1.67},"24.0":{"G":null,"A":29.0,"B":null,"特":null,"単重":1.91},"25.0":{"G":null,"A":31.4,"B":null,"特":null,"単重":2.08},"28.0":{"G":null,"A":39.4,"B":null,"特":null,"単重":2.6},"30.0":{"G":null,"A":45.2,"B":null,"特":null,"単重":2.99},"31.5":{"G":null,"A":49.9,"B":null,"特":null,"単重":3.29},"32.0":{"G":null,"A":51.4,"B":null,"特":null,"単重":3.4},"33.5":{"G":null,"A":56.4,"B":null,"特":null,"単重":3.73},"34.0":{"G":null,"A":58.0,"B":null,"特":null,"単重":3.84},"35.5":{"G":null,"A":63.4,"B":null,"特":null,"単重":4.18},"36.0":{"G":null,"A":65.0,"B":null,"特":null,"単重":4.3},"37.5":{"G":null,"A":70.7,"B":null,"特":null,"単重":4.67},"38.0":{"G":null,"A":72.4,"B":null,"特":null,"単重":4.79},"40.0":{"G":null,"A":80.4,"B":null,"特":null,"単重":5.31},"42.0":{"G":null,"A":88.5,"B":null,"特":null,"単重":5.86},"42.5":{"G":null,"A":90.8,"B":null,"特":null,"単重":6.0},"44.0":{"G":null,"A":97.1,"B":null,"特":null,"単重":6.43},"45.0":{"G":null,"A":102.0,"B":null,"特":null,"単重":6.72},"46.0":{"G":null,"A":106.0,"B":null,"特":null,"単重":7.03},"47.5":{"G":null,"A":113.0,"B":null,"特":null,"単重":7.49},"48.0":{"G":null,"A":116.0,"B":null,"特":null,"単重":7.65},"50.0":{"G":null,"A":126.0,"B":null,"特":null,"単重":8.3},"52.0":{"G":null,"A":136.0,"B":null,"特":null,"単重":8.98},"53.0":{"G":null,"A":141.0,"B":null,"特":null,"単重":9.33},"54.0":{"G":null,"A":146.0,"B":null,"特":null,"単重":9.68},"56.0":{"G":null,"A":158.0,"B":null,"特":null,"単重":10.4},"58.0":{"G":null,"A":169.0,"B":null,"特":null,"単重":11.2},"60.0":{"G":null,"A":181.0,"B":null,"特":null,"単重":12.0},"62.0":{"G":null,"A":193.0,"B":null,"特":null,"単重":12.8},"63.0":{"G":null,"A":199.0,"B":null,"特":null,"単重":13.2}}},"6*7":{"kinds":["A"],"diams":[3.15,4.0,5.0,6.0,6.3,8.0,9.0,10.0,11.2,12.0,12.5,14.0,16.0,18.0,20.0,22.0,22.4,24.0,25.0,26.0,28.0,30.0,31.5,32.0,33.5,34.0,35.5,36.0,37.5,38.0,40.0],"data":{"3.15":{"G":null,"A":0.6,"B":null,"特":null,"単重":0.037},"4.0":{"G":null,"A":0.97,"B":null,"特":null,"単重":0.059},"5.0":{"G":null,"A":1.52,"B":null,"特":null,"単重":0.093},"6.0":{"G":null,"A":2.18,"B":null,"特":null,"単重":0.134},"6.3":{"G":null,"A":2.41,"B":null,"特":null,"単重":0.147},"8.0":{"G":null,"A":3.88,"B":null,"特":null,"単重":0.237},"9.0":{"G":null,"A":4.19,"B":null,"特":null,"単重":0.3},"10.0":{"G":null,"A":6.06,"B":null,"特":null,"単重":0.371},"11.2":{"G":null,"A":7.61,"B":null,"特":null,"単重":0.465},"12.0":{"G":null,"A":8.73,"B":null,"特":null,"単重":0.534},"12.5":{"G":null,"A":9.48,"B":null,"特":null,"単重":0.58},"14.0":{"G":null,"A":11.9,"B":null,"特":null,"単重":0.727},"16.0":{"G":null,"A":15.5,"B":null,"特":null,"単重":0.95},"18.0":{"G":null,"A":19.6,"B":null,"特":null,"単重":1.2},"20.0":{"G":null,"A":24.3,"B":null,"特":null,"単重":1.48},"22.0":{"G":null,"A":29.3,"B":null,"特":null,"単重":1.8},"22.4":{"G":null,"A":30.4,"B":null,"特":null,"単重":1.86},"24.0":{"G":null,"A":34.9,"B":null,"特":null,"単重":2.14},"25.0":{"G":null,"A":37.9,"B":null,"特":null,"単重":2.32},"26.0":{"G":null,"A":41.0,"B":null,"特":null,"単重":2.51},"28.0":{"G":null,"A":47.5,"B":null,"特":null,"単重":2.91},"30.0":{"G":null,"A":54.6,"B":null,"特":null,"単重":3.34},"31.5":{"G":null,"A":60.2,"B":null,"特":null,"単重":3.68},"32.0":{"G":null,"A":62.1,"B":null,"特":null,"単重":3.8},"33.5":{"G":null,"A":68.1,"B":null,"特":null,"単重":4.16},"34.0":{"G":null,"A":70.1,"B":null,"特":null,"単重":4.29},"35.5":{"G":null,"A":76.4,"B":null,"特":null,"単重":4.67},"36.0":{"G":null,"A":78.5,"B":null,"特":null,"単重":4.18},"37.5":{"G":null,"A":85.3,"B":null,"特":null,"単重":5.22},"38.0":{"G":null,"A":87.5,"B":null,"特":null,"単重":5.36},"40.0":{"G":null,"A":97.0,"B":null,"特":null,"単重":5.93}}},"6*Fi(25)":{"kinds":["B"],"diams":[8.0,9.0,10.0,11.2,12.0,12.5,14.0,16.0,18.0,20.0,22.0,22.4,24.0,25.0,26.0,28.0,30.0,31.5,32.0,33.5,34.0,35.5,36.0,37.5,38.0,40.0,42.5,45.0,47.5,50.0,53.0,56.0,60.0],"data":{"8.0":{"G":null,"A":null,"B":3.79,"特":null,"単重":0.247},"9.0":{"G":null,"A":null,"B":4.8,"特":null,"単重":0.312},"10.0":{"G":null,"A":null,"B":5.29,"特":null,"単重":0.386},"11.2":{"G":null,"A":null,"B":7.43,"特":null,"単重":0.484},"12.0":{"G":null,"A":null,"B":8.52,"特":null,"単重":0.556},"12.5":{"G":null,"A":null,"B":9.25,"特":null,"単重":0.603},"14.0":{"G":null,"A":null,"B":11.6,"特":null,"単重":0.756},"16.0":{"G":null,"A":null,"B":15.2,"特":null,"単重":0.988},"18.0":{"G":null,"A":null,"B":19.2,"特":null,"単重":1.25},"20.0":{"G":null,"A":null,"B":23.7,"特":null,"単重":1.54},"22.0":{"G":null,"A":null,"B":28.6,"特":null,"単重":1.87},"22.4":{"G":null,"A":null,"B":29.7,"特":null,"単重":1.94},"24.0":{"G":null,"A":null,"B":34.0,"特":null,"単重":2.22},"25.0":{"G":null,"A":null,"B":37.0,"特":null,"単重":2.41},"26.0":{"G":null,"A":null,"B":39.9,"特":null,"単重":2.61},"28.0":{"G":null,"A":null,"B":46.4,"特":null,"単重":3.02},"30.0":{"G":null,"A":null,"B":53.3,"特":null,"単重":3.47},"31.5":{"G":null,"A":null,"B":58.7,"特":null,"単重":3.83},"32.0":{"G":null,"A":null,"B":60.5,"特":null,"単重":3.95},"33.5":{"G":null,"A":null,"B":66.4,"特":null,"単重":4.33},"34.0":{"G":null,"A":null,"B":68.3,"特":null,"単重":4.46},"35.5":{"G":null,"A":null,"B":74.6,"特":null,"単重":4.86},"36.0":{"G":null,"A":null,"B":76.6,"特":null,"単重":5.0},"37.5":{"G":null,"A":null,"B":83.3,"特":null,"単重":5.43},"38.0":{"G":null,"A":null,"B":85.3,"特":null,"単重":5.57},"40.0":{"G":null,"A":null,"B":94.7,"特":null,"単重":6.17},"42.5":{"G":null,"A":null,"B":107.0,"特":null,"単重":6.97},"45.0":{"G":null,"A":null,"B":120.0,"特":null,"単重":7.81},"47.5":{"G":null,"A":null,"B":134.0,"特":null,"単重":8.7},"50.0":{"G":null,"A":null,"B":148.0,"特":null,"単重":9.65},"53.0":{"G":null,"A":null,"B":166.0,"特":null,"単重":10.8},"56.0":{"G":null,"A":null,"B":186.0,"特":null,"単重":12.1},"60.0":{"G":null,"A":null,"B":213.0,"特":null,"単重":13.9}}},"6*Fi(29)":{"kinds":["B"],"diams":[8.0,9.0,10.0,11.2,12.0,12.5,14.0,16.0,18.0,20.0,22.0,22.4,24.0,25.0,26.0,28.0,30.0,31.5,32.0,33.5,34.0,35.5,36.0,37.5,38.0,40.0,42.5,45.0,47.5,50.0,53.0,56.0,60.0],"data":{"8.0":{"G":null,"A":null,"B":3.87,"特":null,"単重":0.253},"9.0":{"G":null,"A":null,"B":4.89,"特":null,"単重":0.321},"10.0":{"G":null,"A":null,"B":6.04,"特":null,"単重":0.369},"11.2":{"G":null,"A":null,"B":7.58,"特":null,"単重":0.496},"12.0":{"G":null,"A":null,"B":8.68,"特":null,"単重":0.57},"12.5":{"G":null,"A":null,"B":9.44,"特":null,"単重":0.618},"14.0":{"G":null,"A":null,"B":11.8,"特":null,"単重":0.776},"16.0":{"G":null,"A":null,"B":15.5,"特":null,"単重":1.01},"18.0":{"G":null,"A":null,"B":19.6,"特":null,"単重":1.28},"20.0":{"G":null,"A":null,"B":24.2,"特":null,"単重":1.58},"22.0":{"G":null,"A":null,"B":29.2,"特":null,"単重":1.92},"22.4":{"G":null,"A":null,"B":30.3,"特":null,"単重":1.99},"24.0":{"G":null,"A":null,"B":34.7,"特":null,"単重":2.28},"25.0":{"G":null,"A":null,"B":37.8,"特":null,"単重":2.47},"26.0":{"G":null,"A":null,"B":40.7,"特":null,"単重":2.68},"28.0":{"G":null,"A":null,"B":47.4,"特":null,"単重":3.1},"30.0":{"G":null,"A":null,"B":54.4,"特":null,"単重":3.56},"31.5":{"G":null,"A":null,"B":59.9,"特":null,"単重":3.93},"32.0":{"G":null,"A":null,"B":61.7,"特":null,"単重":4.05},"33.5":{"G":null,"A":null,"B":67.8,"特":null,"単重":4.44},"34.0":{"G":null,"A":null,"B":69.7,"特":null,"単重":4.58},"35.5":{"G":null,"A":null,"B":76.1,"特":null,"単重":4.99},"36.0":{"G":null,"A":null,"B":78.1,"特":null,"単重":5.13},"37.5":{"G":null,"A":null,"B":84.9,"特":null,"単重":5.57},"38.0":{"G":null,"A":null,"B":87.0,"特":null,"単重":5.72},"40.0":{"G":null,"A":null,"B":96.6,"特":null,"単重":6.33},"42.5":{"G":null,"A":null,"B":109.0,"特":null,"単重":7.15},"45.0":{"G":null,"A":null,"B":122.0,"特":null,"単重":8.01},"47.5":{"G":null,"A":null,"B":136.0,"特":null,"単重":8.93},"50.0":{"G":null,"A":null,"B":151.0,"特":null,"単重":9.9},"53.0":{"G":null,"A":null,"B":170.0,"特":null,"単重":11.1},"56.0":{"G":null,"A":null,"B":189.0,"特":null,"単重":12.4},"60.0":{"G":null,"A":null,"B":217.0,"特":null,"単重":14.2}}},"6*P・7":{"kinds":["A","B"],"diams":[12.0,12.5,14.0,16.0,18.0,20.0,22.0,22.4,24.0,25.0,26.0,28.0,30.0,31.5,32.0,33.5,34.0,35.5,36.0,37.5,38.0],"data":{"12.0":{"G":null,"A":10.5,"B":11.5,"特":null,"単重":0.592},"12.5":{"G":null,"A":11.4,"B":12.4,"特":null,"単重":0.643},"14.0":{"G":null,"A":14.3,"B":15.6,"特":null,"単重":0.806},"16.0":{"G":null,"A":18.7,"B":20.4,"特":null,"単重":1.05},"18.0":{"G":null,"A":23.7,"B":25.8,"特":null,"単重":1.33},"20.0":{"G":null,"A":29.3,"B":31.9,"特":null,"単重":1.65},"22.0":{"G":null,"A":35.4,"B":38.5,"特":null,"単重":1.99},"22.4":{"G":null,"A":36.7,"B":40.0,"特":null,"単重":2.06},"24.0":{"G":null,"A":42.2,"B":45.9,"特":null,"単重":2.37},"25.0":{"G":null,"A":45.7,"B":49.8,"特":null,"単重":2.57},"26.0":{"G":null,"A":49.5,"B":53.8,"特":null,"単重":2.78},"28.0":{"G":null,"A":57.4,"B":62.4,"特":null,"単重":3.22},"30.0":{"G":null,"A":65.9,"B":71.7,"特":null,"単重":3.7},"31.5":{"G":null,"A":72.6,"B":79.0,"特":null,"単重":4.08},"32.0":{"G":null,"A":74.9,"B":81.6,"特":null,"単重":4.21},"33.5":{"G":null,"A":82.1,"B":89.4,"特":null,"単重":4.62},"34.0":{"G":null,"A":84.6,"B":92.1,"特":null,"単重":4.75},"35.5":{"G":null,"A":92.2,"B":100.0,"特":null,"単重":5.18},"36.0":{"G":null,"A":94.8,"B":103.0,"特":null,"単重":5.33},"37.5":{"G":null,"A":103.0,"B":112.0,"特":null,"単重":5.78},"38.0":{"G":null,"A":106.0,"B":115.0,"特":null,"単重":5.94}}},"6*P・Fi(25)":{"kinds":["B"],"diams":[10.0,11.2,12.0,12.5,14.0,16.0,18.0,20.0,22.0,22.4,24.0,25.0,26.0,28.0,30.0,31.5,32.0,33.5,34.0,35.5,36.0,37.5,38.0,40.0,42.5,44.0,45.0,46.0,47.5,48.0,50.0],"data":{"10.0":{"G":null,"A":null,"B":7.0,"特":null,"単重":0.412},"11.2":{"G":null,"A":null,"B":8.78,"特":null,"単重":0.517},"12.0":{"G":null,"A":null,"B":10.1,"特":null,"単重":0.594},"12.5":{"G":null,"A":null,"B":10.9,"特":null,"単重":0.645},"14.0":{"G":null,"A":null,"B":13.7,"特":null,"単重":0.808},"16.0":{"G":null,"A":null,"B":17.9,"特":null,"単重":1.06},"18.0":{"G":null,"A":null,"B":22.7,"特":null,"単重":1.34},"20.0":{"G":null,"A":null,"B":28.0,"特":null,"単重":1.65},"22.0":{"G":null,"A":null,"B":33.9,"特":null,"単重":2.0},"22.4":{"G":null,"A":null,"B":35.1,"特":null,"単重":2.07},"24.0":{"G":null,"A":null,"B":40.3,"特":null,"単重":2.38},"25.0":{"G":null,"A":null,"B":43.7,"特":null,"単重":2.58},"26.0":{"G":null,"A":null,"B":47.3,"特":null,"単重":2.79},"28.0":{"G":null,"A":null,"B":54.8,"特":null,"単重":3.23},"30.0":{"G":null,"A":null,"B":63.0,"特":null,"単重":3.71},"31.5":{"G":null,"A":null,"B":69.4,"特":null,"単重":4.09},"32.0":{"G":null,"A":null,"B":71.6,"特":null,"単重":4.22},"33.5":{"G":null,"A":null,"B":78.5,"特":null,"単重":4.63},"34.0":{"G":null,"A":null,"B":80.9,"特":null,"単重":4.77},"35.5":{"G":null,"A":null,"B":88.2,"特":null,"単重":5.2},"36.0":{"G":null,"A":null,"B":90.7,"特":null,"単重":5.35},"37.5":{"G":null,"A":null,"B":98.4,"特":null,"単重":5.8},"38.0":{"G":null,"A":null,"B":101.0,"特":null,"単重":5.96},"40.0":{"G":null,"A":null,"B":112.0,"特":null,"単重":6.6},"42.5":{"G":null,"A":null,"B":126.0,"特":null,"単重":7.45},"44.0":{"G":null,"A":null,"B":135.0,"特":null,"単重":7.99},"45.0":{"G":null,"A":null,"B":142.0,"特":null,"単重":8.35},"46.0":{"G":null,"A":null,"B":148.0,"特":null,"単重":8.73},"47.5":{"G":null,"A":null,"B":158.0,"特":null,"単重":9.31},"48.0":{"G":null,"A":null,"B":161.0,"特":null,"単重":9.5},"50.0":{"G":null,"A":null,"B":175.0,"特":null,"単重":10.3}}},"6*P・Fi(29)":{"kinds":["B"],"diams":[10.0,11.2,12.0,12.5,14.0,16.0,18.0,20.0,22.0,22.4,24.0,25.0,26.0,28.0,30.0,31.5,32.0,33.5,34.0,35.5,36.0,37.5,38.0,40.0,42.5,44.0,45.0,46.0,47.5,48.0,50.0,52.0,53.0,54.0,56.0,58.0,60.0],"data":{"10.0":{"G":null,"A":null,"B":7.11,"特":null,"単重":0.424},"11.2":{"G":null,"A":null,"B":8.92,"特":null,"単重":0.532},"12.0":{"G":null,"A":null,"B":10.2,"特":null,"単重":0.611},"12.5":{"G":null,"A":null,"B":11.1,"特":null,"単重":0.663},"14.0":{"G":null,"A":null,"B":13.9,"特":null,"単重":0.831},"16.0":{"G":null,"A":null,"B":18.2,"特":null,"単重":1.09},"18.0":{"G":null,"A":null,"B":23.0,"特":null,"単重":1.37},"20.0":{"G":null,"A":null,"B":28.4,"特":null,"単重":1.7},"22.0":{"G":null,"A":null,"B":34.4,"特":null,"単重":2.05},"22.4":{"G":null,"A":null,"B":35.7,"特":null,"単重":2.13},"24.0":{"G":null,"A":null,"B":40.9,"特":null,"単重":2.44},"25.0":{"G":null,"A":null,"B":44.4,"特":null,"単重":2.65},"26.0":{"G":null,"A":null,"B":48.1,"特":null,"単重":2.87},"28.0":{"G":null,"A":null,"B":55.7,"特":null,"単重":3.33},"30.0":{"G":null,"A":null,"B":64.0,"特":null,"単重":3.82},"31.5":{"G":null,"A":null,"B":70.5,"特":null,"単重":4.21},"32.0":{"G":null,"A":null,"B":72.8,"特":null,"単重":4.34},"33.5":{"G":null,"A":null,"B":79.8,"特":null,"単重":4.76},"34.0":{"G":null,"A":null,"B":82.2,"特":null,"単重":4.9},"35.5":{"G":null,"A":null,"B":89.6,"特":null,"単重":5.35},"36.0":{"G":null,"A":null,"B":92.1,"特":null,"単重":5.5},"37.5":{"G":null,"A":null,"B":100.0,"特":null,"単重":5.97},"38.0":{"G":null,"A":null,"B":103.0,"特":null,"単重":6.13},"40.0":{"G":null,"A":null,"B":114.0,"特":null,"単重":6.79},"42.5":{"G":null,"A":null,"B":128.0,"特":null,"単重":7.66},"44.0":{"G":null,"A":null,"B":138.0,"特":null,"単重":8.21},"45.0":{"G":null,"A":null,"B":144.0,"特":null,"単重":8.59},"46.0":{"G":null,"A":null,"B":150.0,"特":null,"単重":8.98},"47.5":{"G":null,"A":null,"B":160.0,"特":null,"単重":9.57},"48.0":{"G":null,"A":null,"B":164.0,"特":null,"単重":9.77},"50.0":{"G":null,"A":null,"B":178.0,"特":null,"単重":10.6},"52.0":{"G":null,"A":null,"B":192.0,"特":null,"単重":11.5},"53.0":{"G":null,"A":null,"B":200.0,"特":null,"単重":11.9},"54.0":{"G":null,"A":null,"B":207.0,"特":null,"単重":12.4},"56.0":{"G":null,"A":null,"B":223.0,"特":null,"単重":13.3},"58.0":{"G":null,"A":null,"B":239.0,"特":null,"単重":14.3},"60.0":{"G":null,"A":null,"B":256.0,"特":null,"単重":15.3}}},"6*P・WS(31)":{"kinds":["A","B"],"diams":[16.0,18.0,20.0,22.0,22.4,24.0,25.0,26.0,28.0,30.0,31.5,32.0,33.5,34.0,35.5,36.0,37.5,38.0,40.0,42.5,44.0,45.0,46.0,47.5,48.0,50.0,52.0,53.0,54.0,56.0,58.0,60.0],"data":{"16.0":{"G":null,"A":16.7,"B":18.2,"特":null,"単重":1.09},"18.0":{"G":null,"A":21.1,"B":23.0,"特":null,"単重":1.37},"20.0":{"G":null,"A":26.1,"B":28.4,"特":null,"単重":1.7},"22.0":{"G":null,"A":31.5,"B":34.4,"特":null,"単重":2.05},"22.4":{"G":null,"A":32.7,"B":35.7,"特":null,"単重":2.13},"24.0":{"G":null,"A":37.5,"B":40.9,"特":null,"単重":2.44},"25.0":{"G":null,"A":40.7,"B":44.4,"特":null,"単重":2.65},"26.0":{"G":null,"A":44.0,"B":48.1,"特":null,"単重":2.87},"28.0":{"G":null,"A":51.1,"B":55.7,"特":null,"単重":3.33},"30.0":{"G":null,"A":58.6,"B":64.0,"特":null,"単重":3.82},"31.5":{"G":null,"A":64.7,"B":70.5,"特":null,"単重":4.21},"32.0":{"G":null,"A":66.7,"B":72.8,"特":null,"単重":4.34},"33.5":{"G":null,"A":73.1,"B":79.8,"特":null,"単重":4.76},"34.0":{"G":null,"A":75.3,"B":82.2,"特":null,"単重":4.9},"35.5":{"G":null,"A":82.1,"B":89.6,"特":null,"単重":5.35},"36.0":{"G":null,"A":84.4,"B":92.1,"特":null,"単重":5.5},"37.5":{"G":null,"A":91.6,"B":100.0,"特":null,"単重":5.97},"38.0":{"G":null,"A":94.1,"B":103.0,"特":null,"単重":6.13},"40.0":{"G":null,"A":104.0,"B":114.0,"特":null,"単重":6.79},"42.5":{"G":null,"A":118.0,"B":128.0,"特":null,"単重":7.66},"44.0":{"G":null,"A":126.0,"B":138.0,"特":null,"単重":8.21},"45.0":{"G":null,"A":132.0,"B":144.0,"特":null,"単重":8.59},"46.0":{"G":null,"A":138.0,"B":150.0,"特":null,"単重":8.98},"47.5":{"G":null,"A":147.0,"B":160.0,"特":null,"単重":9.57},"48.0":{"G":null,"A":150.0,"B":164.0,"特":null,"単重":9.77},"50.0":{"G":null,"A":163.0,"B":178.0,"特":null,"単重":10.6},"52.0":{"G":null,"A":176.0,"B":192.0,"特":null,"単重":11.5},"53.0":{"G":null,"A":183.0,"B":200.0,"特":null,"単重":11.9},"54.0":{"G":null,"A":190.0,"B":207.0,"特":null,"単重":12.4},"56.0":{"G":null,"A":204.0,"B":223.0,"特":null,"単重":13.3},"58.0":{"G":null,"A":219.0,"B":239.0,"特":null,"単重":14.3},"60.0":{"G":null,"A":235.0,"B":256.0,"特":null,"単重":15.3}}},"6*P・WS(36)":{"kinds":["A","B"],"diams":[16.0,18.0,20.0,22.0,22.4,24.0,25.0,26.0,28.0,30.0,31.5,32.0,33.5,34.0,35.5,36.0,37.5,38.0,40.0,42.5,44.0,45.0,46.0,47.5,48.0,50.0,52.0,53.0,54.0,56.0,58.0,60.0],"data":{"16.0":{"G":null,"A":16.7,"B":18.2,"特":null,"単重":1.09},"18.0":{"G":null,"A":21.1,"B":23.0,"特":null,"単重":1.37},"20.0":{"G":null,"A":26.1,"B":28.4,"特":null,"単重":1.7},"22.0":{"G":null,"A":31.5,"B":34.4,"特":null,"単重":2.05},"22.4":{"G":null,"A":32.7,"B":35.7,"特":null,"単重":2.13},"24.0":{"G":null,"A":37.5,"B":40.9,"特":null,"単重":2.44},"25.0":{"G":null,"A":40.7,"B":44.4,"特":null,"単重":2.65},"26.0":{"G":null,"A":44.0,"B":48.1,"特":null,"単重":2.87},"28.0":{"G":null,"A":51.1,"B":55.7,"特":null,"単重":3.33},"30.0":{"G":null,"A":58.6,"B":64.0,"特":null,"単重":3.82},"31.5":{"G":null,"A":64.7,"B":70.5,"特":null,"単重":4.21},"32.0":{"G":null,"A":66.7,"B":72.8,"特":null,"単重":4.34},"33.5":{"G":null,"A":73.1,"B":79.8,"特":null,"単重":4.76},"34.0":{"G":null,"A":75.3,"B":82.2,"特":null,"単重":4.9},"35.5":{"G":null,"A":82.1,"B":89.6,"特":null,"単重":5.35},"36.0":{"G":null,"A":84.4,"B":92.1,"特":null,"単重":5.5},"37.5":{"G":null,"A":91.6,"B":100.0,"特":null,"単重":5.97},"38.0":{"G":null,"A":94.1,"B":103.0,"特":null,"単重":6.13},"40.0":{"G":null,"A":104.0,"B":114.0,"特":null,"単重":6.79},"42.5":{"G":null,"A":118.0,"B":128.0,"特":null,"単重":7.66},"44.0":{"G":null,"A":126.0,"B":138.0,"特":null,"単重":8.21},"45.0":{"G":null,"A":132.0,"B":144.0,"特":null,"単重":8.59},"46.0":{"G":null,"A":138.0,"B":150.0,"特":null,"単重":8.98},"47.5":{"G":null,"A":147.0,"B":160.0,"特":null,"単重":9.57},"48.0":{"G":null,"A":150.0,"B":164.0,"特":null,"単重":9.77},"50.0":{"G":null,"A":163.0,"B":178.0,"特":null,"単重":10.6},"52.0":{"G":null,"A":176.0,"B":192.0,"特":null,"単重":11.5},"53.0":{"G":null,"A":183.0,"B":200.0,"特":null,"単重":11.9},"54.0":{"G":null,"A":190.0,"B":207.0,"特":null,"単重":12.4},"56.0":{"G":null,"A":204.0,"B":223.0,"特":null,"単重":13.3},"58.0":{"G":null,"A":219.0,"B":239.0,"特":null,"単重":14.3},"60.0":{"G":null,"A":235.0,"B":256.0,"特":null,"単重":15.3}}},"6*WS(31)":{"kinds":["A","B"],"diams":[16.0,18.0,20.0,22.0,22.4,24.0,25.0,26.0,28.0,30.0,31.5,32.0,33.5,34.0,35.5,36.0,37.5,38.0,40.0,42.5,45.0,47.5,50.0,53.0,56.0,60.0],"data":{"16.0":{"G":null,"A":14.5,"B":15.5,"特":null,"単重":1.01},"18.0":{"G":null,"A":18.4,"B":19.6,"特":null,"単重":1.28},"20.0":{"G":null,"A":22.7,"B":24.2,"特":null,"単重":1.58},"22.0":{"G":null,"A":27.4,"B":29.2,"特":null,"単重":1.92},"22.4":{"G":null,"A":28.4,"B":30.3,"特":null,"単重":1.99},"24.0":{"G":null,"A":32.6,"B":34.7,"特":null,"単重":2.28},"25.0":{"G":null,"A":35.4,"B":37.8,"特":null,"単重":2.47},"26.0":{"G":null,"A":38.3,"B":40.7,"特":null,"単重":2.68},"28.0":{"G":null,"A":44.4,"B":47.4,"特":null,"単重":3.1},"30.0":{"G":null,"A":51.0,"B":54.4,"特":null,"単重":3.56},"31.5":{"G":null,"A":56.3,"B":59.9,"特":null,"単重":3.93},"32.0":{"G":null,"A":58.0,"B":61.7,"特":null,"単重":4.05},"33.5":{"G":null,"A":63.6,"B":67.8,"特":null,"単重":4.44},"34.0":{"G":null,"A":65.5,"B":69.7,"特":null,"単重":4.58},"35.5":{"G":null,"A":71.4,"B":76.1,"特":null,"単重":4.99},"36.0":{"G":null,"A":73.4,"B":78.1,"特":null,"単重":5.13},"37.5":{"G":null,"A":79.7,"B":84.9,"特":null,"単重":5.57},"38.0":{"G":null,"A":81.8,"B":87.0,"特":null,"単重":5.72},"40.0":{"G":null,"A":90.7,"B":96.6,"特":null,"単重":6.33},"42.5":{"G":null,"A":102.0,"B":109.0,"特":null,"単重":7.15},"45.0":{"G":null,"A":115.0,"B":122.0,"特":null,"単重":8.01},"47.5":{"G":null,"A":128.0,"B":136.0,"特":null,"単重":8.93},"50.0":{"G":null,"A":142.0,"B":151.0,"特":null,"単重":9.9},"53.0":{"G":null,"A":159.0,"B":170.0,"特":null,"単重":11.1},"56.0":{"G":null,"A":178.0,"B":189.0,"特":null,"単重":12.4},"60.0":{"G":null,"A":204.0,"B":217.0,"特":null,"単重":14.2}}},"6*WS(36)":{"kinds":["A","B"],"diams":[16.0,18.0,20.0,22.0,22.4,24.0,25.0,26.0,28.0,30.0,31.5,32.0,33.5,34.0,35.5,36.0,37.5,38.0,40.0,42.5,45.0,47.5,50.0,53.0,56.0,60.0],"data":{"16.0":{"G":null,"A":14.5,"B":15.5,"特":null,"単重":1.01},"18.0":{"G":null,"A":18.4,"B":19.6,"特":null,"単重":1.28},"20.0":{"G":null,"A":22.7,"B":24.2,"特":null,"単重":1.58},"22.0":{"G":null,"A":27.4,"B":29.2,"特":null,"単重":1.92},"22.4":{"G":null,"A":28.4,"B":30.3,"特":null,"単重":1.99},"24.0":{"G":null,"A":32.6,"B":34.7,"特":null,"単重":2.28},"25.0":{"G":null,"A":35.4,"B":37.8,"特":null,"単重":2.47},"26.0":{"G":null,"A":38.3,"B":40.7,"特":null,"単重":2.68},"28.0":{"G":null,"A":44.4,"B":47.4,"特":null,"単重":3.1},"30.0":{"G":null,"A":51.0,"B":54.4,"特":null,"単重":3.56},"31.5":{"G":null,"A":56.3,"B":59.9,"特":null,"単重":3.93},"32.0":{"G":null,"A":58.0,"B":61.7,"特":null,"単重":4.05},"33.5":{"G":null,"A":63.6,"B":67.8,"特":null,"単重":4.44},"34.0":{"G":null,"A":65.5,"B":69.7,"特":null,"単重":4.58},"35.5":{"G":null,"A":71.4,"B":76.1,"特":null,"単重":4.99},"36.0":{"G":null,"A":73.4,"B":78.1,"特":null,"単重":5.13},"37.5":{"G":null,"A":79.7,"B":84.9,"特":null,"単重":5.57},"38.0":{"G":null,"A":81.8,"B":87.0,"特":null,"単重":5.72},"40.0":{"G":null,"A":90.7,"B":96.6,"特":null,"単重":6.33},"42.5":{"G":null,"A":102.0,"B":109.0,"特":null,"単重":7.15},"45.0":{"G":null,"A":115.0,"B":122.0,"特":null,"単重":8.01},"47.5":{"G":null,"A":128.0,"B":136.0,"特":null,"単重":8.93},"50.0":{"G":null,"A":142.0,"B":151.0,"特":null,"単重":9.9},"53.0":{"G":null,"A":159.0,"B":170.0,"特":null,"単重":11.1},"56.0":{"G":null,"A":178.0,"B":189.0,"特":null,"単重":12.4},"60.0":{"G":null,"A":204.0,"B":217.0,"特":null,"単重":14.2}}},"7*P・7":{"kinds":["A","B"],"diams":[20.0,22.0,22.4,24.0,25.0,26.0,28.0,30.0,31.5,32.0,33.5,34.0,35.5,36.0,37.5,38.0],"data":{"20.0":{"G":null,"A":34.3,"B":37.3,"特":null,"単重":1.87},"22.0":{"G":null,"A":41.5,"B":45.1,"特":null,"単重":2.26},"22.4":{"G":null,"A":43.0,"B":46.7,"特":null,"単重":2.35},"24.0":{"G":null,"A":49.3,"B":53.7,"特":null,"単重":2.7},"25.0":{"G":null,"A":53.5,"B":58.2,"特":null,"単重":2.92},"26.0":{"G":null,"A":57.9,"B":63.0,"特":null,"単重":3.16},"28.0":{"G":null,"A":67.2,"B":73.0,"特":null,"単重":3.67},"30.0":{"G":null,"A":77.1,"B":83.8,"特":null,"単重":4.12},"31.5":{"G":null,"A":85.0,"B":92.4,"特":null,"単重":4.64},"32.0":{"G":null,"A":87.7,"B":95.4,"特":null,"単重":4.79},"33.5":{"G":null,"A":96.1,"B":105.0,"特":null,"単重":5.25},"34.0":{"G":null,"A":99.0,"B":108.0,"特":null,"単重":5.41},"35.5":{"G":null,"A":108.0,"B":117.0,"特":null,"単重":5.9},"36.0":{"G":null,"A":111.0,"B":121.0,"特":null,"単重":6.06},"37.5":{"G":null,"A":120.0,"B":131.0,"特":null,"単重":6.58},"38.0":{"G":null,"A":124.0,"B":135.0,"特":null,"単重":6.76}}},"8*P・S（19）":{"kinds":[],"diams":[8.0],"data":{"8.0":{"G":null,"A":null,"B":null,"特":null,"単重":0.24}}},"IWRC6*Fi(25)":{"kinds":["B"],"diams":[8.0,9.0,10.0,11.2,12.0,12.5,14.0,16.0,18.0,20.0,22.0,22.4,24.0,25.0,26.0,28.0,30.0,31.5,32.0,33.5,34.0,35.5,36.0,37.5,38.0,40.0,42.5,45.0,47.5,50.0,53.0,56.0,60.0],"data":{"8.0":{"G":null,"A":null,"B":4.32,"特":null,"単重":0.275},"9.0":{"G":null,"A":null,"B":5.47,"特":null,"単重":0.348},"10.0":{"G":null,"A":null,"B":6.75,"特":null,"単重":0.43},"11.2":{"G":null,"A":null,"B":8.47,"特":null,"単重":0.539},"12.0":{"G":null,"A":null,"B":9.68,"特":null,"単重":0.619},"12.5":{"G":null,"A":null,"B":10.5,"特":null,"単重":0.672},"14.0":{"G":null,"A":null,"B":13.2,"特":null,"単重":0.843},"16.0":{"G":null,"A":null,"B":17.3,"特":null,"単重":1.1},"18.0":{"G":null,"A":null,"B":21.9,"特":null,"単重":1.39},"20.0":{"G":null,"A":null,"B":27.0,"特":null,"単重":1.72},"22.0":{"G":null,"A":null,"B":32.5,"特":null,"単重":2.08},"22.4":{"G":null,"A":null,"B":33.9,"特":null,"単重":2.16},"24.0":{"G":null,"A":null,"B":38.7,"特":null,"単重":2.48},"25.0":{"G":null,"A":null,"B":42.2,"特":null,"単重":2.69},"26.0":{"G":null,"A":null,"B":45.5,"特":null,"単重":2.91},"28.0":{"G":null,"A":null,"B":52.9,"特":null,"単重":3.37},"30.0":{"G":null,"A":null,"B":60.7,"特":null,"単重":3.87},"31.5":{"G":null,"A":null,"B":67.0,"特":null,"単重":4.27},"32.0":{"G":null,"A":null,"B":68.9,"特":null,"単重":4.4},"33.5":{"G":null,"A":null,"B":75.7,"特":null,"単重":4.83},"34.0":{"G":null,"A":null,"B":77.7,"特":null,"単重":4.97},"35.5":{"G":null,"A":null,"B":85.1,"特":null,"単重":5.24},"36.0":{"G":null,"A":null,"B":87.2,"特":null,"単重":5.57},"37.5":{"G":null,"A":null,"B":94.9,"特":null,"単重":6.05},"38.0":{"G":null,"A":null,"B":97.1,"特":null,"単重":6.21},"40.0":{"G":null,"A":null,"B":108.0,"特":null,"単重":6.88},"42.5":{"G":null,"A":null,"B":122.0,"特":null,"単重":7.77},"45.0":{"G":null,"A":null,"B":137.0,"特":null,"単重":7.71},"47.5":{"G":null,"A":null,"B":152.0,"特":null,"単重":9.7},"50.0":{"G":null,"A":null,"B":169.0,"特":null,"単重":10.8},"53.0":{"G":null,"A":null,"B":190.0,"特":null,"単重":12.1},"56.0":{"G":null,"A":null,"B":212.0,"特":null,"単重":13.5},"60.0":{"G":null,"A":null,"B":243.0,"特":null,"単重":15.5}}},"IWRC6*Fi(29)":{"kinds":["B"],"diams":[8.0,9.0,10.0,11.2,12.0,12.5,14.0,16.0,18.0,20.0,22.0,22.4,24.0,25.0,26.0,28.0,30.0,31.5,32.0,33.5,34.0,35.5,36.0,37.5,38.0,40.0,42.5,44.0,45.0,46.0,47.5,48.0,50.0,52.0,53.0,54.0,56.0,58.0,60.0],"data":{"8.0":{"G":null,"A":null,"B":4.42,"特":null,"単重":0.282},"9.0":{"G":null,"A":null,"B":5.59,"特":null,"単重":0.356},"10.0":{"G":null,"A":null,"B":6.9,"特":null,"単重":0.44},"11.2":{"G":null,"A":null,"B":8.66,"特":null,"単重":0.552},"12.0":{"G":null,"A":null,"B":9.94,"特":null,"単重":0.634},"12.5":{"G":null,"A":null,"B":10.8,"特":null,"単重":0.688},"14.0":{"G":null,"A":null,"B":13.5,"特":null,"単重":0.863},"16.0":{"G":null,"A":null,"B":17.7,"特":null,"単重":1.13},"18.0":{"G":null,"A":null,"B":22.4,"特":null,"単重":1.43},"20.0":{"G":null,"A":null,"B":27.6,"特":null,"単重":1.76},"22.0":{"G":null,"A":null,"B":33.4,"特":null,"単重":2.13},"22.4":{"G":null,"A":null,"B":34.6,"特":null,"単重":2.21},"24.0":{"G":null,"A":null,"B":39.8,"特":null,"単重":2.53},"25.0":{"G":null,"A":null,"B":43.2,"特":null,"単重":2.75},"26.0":{"G":null,"A":null,"B":46.7,"特":null,"単重":2.96},"28.0":{"G":null,"A":null,"B":54.1,"特":null,"単重":3.45},"30.0":{"G":null,"A":null,"B":62.1,"特":null,"単重":3.96},"31.5":{"G":null,"A":null,"B":68.5,"特":null,"単重":4.37},"32.0":{"G":null,"A":null,"B":70.7,"特":null,"単重":4.51},"33.5":{"G":null,"A":null,"B":77.5,"特":null,"単重":4.94},"34.0":{"G":null,"A":null,"B":79.8,"特":null,"単重":5.09},"35.5":{"G":null,"A":null,"B":87.0,"特":null,"単重":5.55},"36.0":{"G":null,"A":null,"B":89.5,"特":null,"単重":5.7},"37.5":{"G":null,"A":null,"B":97.1,"特":null,"単重":6.19},"38.0":{"G":null,"A":null,"B":99.7,"特":null,"単重":6.35},"40.0":{"G":null,"A":null,"B":110.0,"特":null,"単重":7.04},"42.5":{"G":null,"A":null,"B":125.0,"特":null,"単重":7.95},"44.0":{"G":null,"A":null,"B":133.0,"特":null,"単重":8.52},"45.0":{"G":null,"A":null,"B":140.0,"特":null,"単重":8.91},"46.0":{"G":null,"A":null,"B":146.0,"特":null,"単重":9.31},"47.5":{"G":null,"A":null,"B":156.0,"特":null,"単重":9.93},"48.0":{"G":null,"A":null,"B":159.0,"特":null,"単重":10.1},"50.0":{"G":null,"A":null,"B":173.0,"特":null,"単重":11.0},"52.0":{"G":null,"A":null,"B":186.0,"特":null,"単重":11.9},"53.0":{"G":null,"A":null,"B":194.0,"特":null,"単重":12.4},"54.0":{"G":null,"A":null,"B":201.0,"特":null,"単重":12.8},"56.0":{"G":null,"A":null,"B":217.0,"特":null,"単重":13.8},"58.0":{"G":null,"A":null,"B":232.0,"特":null,"単重":14.8},"60.0":{"G":null,"A":null,"B":249.0,"特":null,"単重":15.8}}},"IWRC6*P・Fi(25)":{"kinds":["B"],"diams":[10.0,11.2,12.0,12.5,14.0,16.0,18.0,20.0,22.0,22.4,24.0,25.0,26.0,28.0,30.0,31.5,32.0,33.5,34.0,35.5,36.0,37.5,38.0,40.0,42.5,44.0,45.0,46.0,47.5,48.0,50.0],"data":{"10.0":{"G":null,"A":null,"B":7.78,"特":null,"単重":0.452},"11.2":{"G":null,"A":null,"B":9.76,"特":null,"単重":0.568},"12.0":{"G":null,"A":null,"B":11.2,"特":null,"単重":0.652},"12.5":{"G":null,"A":null,"B":12.2,"特":null,"単重":0.707},"14.0":{"G":null,"A":null,"B":15.2,"特":null,"単重":0.887},"16.0":{"G":null,"A":null,"B":19.9,"特":null,"単重":1.16},"18.0":{"G":null,"A":null,"B":25.2,"特":null,"単重":1.47},"20.0":{"G":null,"A":null,"B":31.1,"特":null,"単重":1.81},"22.0":{"G":null,"A":null,"B":37.7,"特":null,"単重":2.19},"22.4":{"G":null,"A":null,"B":39.0,"特":null,"単重":2.27},"24.0":{"G":null,"A":null,"B":44.8,"特":null,"単重":2.61},"25.0":{"G":null,"A":null,"B":48.6,"特":null,"単重":2.83},"26.0":{"G":null,"A":null,"B":52.6,"特":null,"単重":3.06},"28.0":{"G":null,"A":null,"B":61.0,"特":null,"単重":3.55},"30.0":{"G":null,"A":null,"B":70.0,"特":null,"単重":4.07},"31.5":{"G":null,"A":null,"B":77.2,"特":null,"単重":4.49},"32.0":{"G":null,"A":null,"B":79.7,"特":null,"単重":4.63},"33.5":{"G":null,"A":null,"B":87.3,"特":null,"単重":5.08},"34.0":{"G":null,"A":null,"B":89.9,"特":null,"単重":5.23},"35.5":{"G":null,"A":null,"B":98.0,"特":null,"単重":5.7},"36.0":{"G":null,"A":null,"B":101.0,"特":null,"単重":5.86},"37.5":{"G":null,"A":null,"B":109.0,"特":null,"単重":6.36},"38.0":{"G":null,"A":null,"B":112.0,"特":null,"単重":6.53},"40.0":{"G":null,"A":null,"B":124.0,"特":null,"単重":7.24},"42.5":{"G":null,"A":null,"B":141.0,"特":null,"単重":8.17},"44.0":{"G":null,"A":null,"B":151.0,"特":null,"単重":8.76},"45.0":{"G":null,"A":null,"B":158.0,"特":null,"単重":9.16},"46.0":{"G":null,"A":null,"B":165.0,"特":null,"単重":9.57},"47.5":{"G":null,"A":null,"B":176.0,"特":null,"単重":10.2},"48.0":{"G":null,"A":null,"B":179.0,"特":null,"単重":10.4},"50.0":{"G":null,"A":null,"B":194.0,"特":null,"単重":11.3}}},"IWRC6*P・Fi(29)":{"kinds":["B"],"diams":[10.0,11.2,12.0,12.5,14.0,16.0,18.0,20.0,22.0,22.4,24.0,25.0,26.0,28.0,30.0,31.5,32.0,33.5,34.0,35.5,36.0,37.5,38.0,40.0,42.5,44.0,45.0,46.0,47.5,48.0,50.0,52.0,53.0,54.0,56.0,58.0,60.0],"data":{"10.0":{"G":null,"A":null,"B":7.89,"特":null,"単重":0.465},"11.2":{"G":null,"A":null,"B":9.9,"特":null,"単重":0.583},"12.0":{"G":null,"A":null,"B":11.4,"特":null,"単重":0.669},"12.5":{"G":null,"A":null,"B":12.3,"特":null,"単重":0.726},"14.0":{"G":null,"A":null,"B":15.5,"特":null,"単重":0.911},"16.0":{"G":null,"A":null,"B":20.2,"特":null,"単重":1.19},"18.0":{"G":null,"A":null,"B":25.6,"特":null,"単重":1.51},"20.0":{"G":null,"A":null,"B":31.6,"特":null,"単重":1.86},"22.0":{"G":null,"A":null,"B":38.2,"特":null,"単重":2.25},"22.4":{"G":null,"A":null,"B":39.6,"特":null,"単重":2.33},"24.0":{"G":null,"A":null,"B":45.4,"特":null,"単重":2.68},"25.0":{"G":null,"A":null,"B":49.3,"特":null,"単重":2.91},"26.0":{"G":null,"A":null,"B":53.3,"特":null,"単重":3.14},"28.0":{"G":null,"A":null,"B":61.8,"特":null,"単重":3.64},"30.0":{"G":null,"A":null,"B":71.0,"特":null,"単重":4.18},"31.5":{"G":null,"A":null,"B":78.3,"特":null,"単重":4.61},"32.0":{"G":null,"A":null,"B":80.8,"特":null,"単重":4.76},"33.5":{"G":null,"A":null,"B":88.5,"特":null,"単重":5.22},"34.0":{"G":null,"A":null,"B":91.2,"特":null,"単重":5.37},"35.5":{"G":null,"A":null,"B":99.4,"特":null,"単重":5.86},"36.0":{"G":null,"A":null,"B":102.0,"特":null,"単重":6.03},"37.5":{"G":null,"A":null,"B":111.0,"特":null,"単重":6.54},"38.0":{"G":null,"A":null,"B":114.0,"特":null,"単重":6.71},"40.0":{"G":null,"A":null,"B":126.0,"特":null,"単重":7.44},"42.5":{"G":null,"A":null,"B":142.0,"特":null,"単重":8.4},"44.0":{"G":null,"A":null,"B":153.0,"特":null,"単重":9.0},"45.0":{"G":null,"A":null,"B":160.0,"特":null,"単重":9.41},"46.0":{"G":null,"A":null,"B":167.0,"特":null,"単重":9.84},"47.5":{"G":null,"A":null,"B":178.0,"特":null,"単重":10.5},"48.0":{"G":null,"A":null,"B":182.0,"特":null,"単重":10.7},"50.0":{"G":null,"A":null,"B":197.0,"特":null,"単重":11.6},"52.0":{"G":null,"A":null,"B":213.0,"特":null,"単重":12.6},"53.0":{"G":null,"A":null,"B":222.0,"特":null,"単重":13.1},"54.0":{"G":null,"A":null,"B":230.0,"特":null,"単重":13.6},"56.0":{"G":null,"A":null,"B":247.0,"特":null,"単重":14.6},"58.0":{"G":null,"A":null,"B":265.0,"特":null,"単重":15.6},"60.0":{"G":null,"A":null,"B":284.0,"特":null,"単重":16.7}}}};
+const ALL_DIAMS=[3.15,4.0,5.0,6.0,6.3,8.0,9.0,10.0,11.2,12.0,12.5,14.0,16.0,18.0,20.0,22.0,22.4,24.0,25.0,26.0,28.0,30.0,31.5,32.0,33.5,34.0,35.5,36.0,37.5,38.0,40.0,42.0,42.5,44.0,45.0,46.0,47.5,48.0,50.0,52.0,53.0,54.0,56.0,58.0,60.0,62.0,63.0];
+const KIND_LABEL={'G':'G種','A':'A種','B':'B種','特':'特種'};
+const PI=Math.PI,r2d=v=>v*180/PI,d2r=v=>v*PI/180;
+const fqn=hd=>8.5*Math.pow(hd,.25);
+const fqe=hd=>100*Math.pow(hd,.25);
+const fnv=()=>0.98*(1-Math.pow(.98,2))/(1-.98)/2;
+const fww=(d,w,q)=>Math.sqrt(w*w+(q*1.2*d/1000)**2);
+
+function calcAll(p){
+  const{xl,hh,hd,s,wy,wc,mm,mo,so,ui,v,zl,zm,q40,p40,q41,p41,q42,p42,k40d,k41d,k42d,sf}=p;
+  const al=r2d(Math.atan(hh/xl)),yl=xl/Math.cos(Math.atan(hh/xl));
+  const QN=fqn(hd),QE=fqe(hd),NV=fnv();
+  const w1=fww(k40d,q40,QN),w2=fww(k41d,q41,QN),w3=fww(k42d,q42,QN);
+  const qv=((wy+w2*hd*mm/1000)+wc);
+  const ws=w1*yl/1000,pt=(w2+w3*(mo+1))*yl/1000;
+  const xn=qv/ws,ro=pt/ws;
+  const gs=Math.sqrt((1+ro)**2+3*((1+ro)*xn+xn**2));
+  const ss=s*gs/(1+ro+2*xn);
+  const sa=r2d(Math.atan(Math.tan(d2r(al))+4*ss*(1+ro+xn)/gs));
+  const za=ws*gs/(8*Math.cos(d2r(sa))*ss);
+  const sb=r2d(Math.atan(Math.tan(d2r(al))-4*ss*(1+ro+xn)/gs));
+  const zb=ws*gs/(8*Math.cos(d2r(sb))*ss);
+  const tq=qv*Math.sin(d2r(al));
+  const tm=(wy/mm+w2*hd/1000)/NV;
+  const too=w3*yl*Math.sqrt(1+(Math.tan(d2r(al))+4*so)**2)/(8000*so);
+  const zs=ui==='上部'?tm+(mo+1)*too+tq:tm+(mo+1)*(tq/mo+too);
+  const ts=za-zs,tsb=ts-w1*hh/1000;
+  const x1=0.95,x2=x1-1/xl;
+  const gf1=Math.sqrt((1+ro)**2+12*x1*(1-x1)*(xn*(1+ro)+xn**2));
+  const f1=4*xl*ss*x1*(1-x1)*(1+ro+2*xn)/gf1;
+  const gf2=Math.sqrt((1+ro)**2+12*x2*(1-x2)*(xn*(1+ro)+xn**2));
+  const f2=4*xl*ss*x2*(1-x2)*(1+ro+2*xn)/gf2;
+  const bt=r2d(Math.atan(Math.tan(d2r(al))+(f2-f1)));
+  const tp=(wy+wc)*Math.sin(d2r(bt))/mo,tr=(wy+wc)*zl/mo;
+  const to=too+tp+tr;
+  const kwH=v*tm/(6.12*zm),kwT=v*mo*(tp+tr)/(6.12*zm);
+  const y18=p40/ts,y32=p41/tm,y45=p42/to;
+  return{al,yl,QN,QE,NV,w1,w2,w3,qv,ws,pt,xn,ro,gs,ss,sa,za,sb,zb,tq,tm,too,zs,ts,tsb,bt,tp,tr,to,kwH,kwT,y18,y32,y45};
+}
+
+const f4=v=>typeof v==='number'?v.toFixed(4):'—';
+function setR(id,val){const el=document.getElementById(id);if(el)el.textContent=f4(val);}
+function setBar(bf,bm,bml,val,th,mx){
+  const p=Math.min(val/mx,1)*100,t=Math.min(th/mx,1)*100;
+  bf.style.width=p+'%';
+  bf.className='bar-fill '+(val>th?'bar-ok':'bar-out');
+  bm.style.left=t+'%';
+  bml.textContent='≧'+th;
+}
+
+let sfChart=null;
+function initChart(){
+  const ctx=document.getElementById('sfChart').getContext('2d');
+  sfChart=new Chart(ctx,{
+    type:'bar',
+    data:{labels:['主索 Y18','巻上索 Y32','横行索 Y45'],datasets:[{data:[0,0,0],borderRadius:4}]},
+    options:{responsive:false,animation:{duration:150},maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw.toFixed(4)}}},
+      scales:{y:{min:0,max:8,ticks:{font:{size:10}}},x:{ticks:{font:{size:10}}}}}});
+}
+
+function update(){
+  if(!sfChart)return;
+  const gv=id=>{const el=document.getElementById(id);return el?parseFloat(el.value)||0:0;};
+  const sf=parseFloat(document.getElementById('grade').value);
+  const q40=parseFloat(document.getElementById('q40').value);
+  const p40=parseFloat(document.getElementById('p40').value);
+  const q41=parseFloat(document.getElementById('q41').value);
+  const p41=parseFloat(document.getElementById('p41').value);
+  const q42=parseFloat(document.getElementById('q42').value);
+  const p42=parseFloat(document.getElementById('p42').value);
+  const k40d=parseFloat(document.getElementById('diam40').value);
+  const k41d=parseFloat(document.getElementById('diam41').value);
+  const k42d=parseFloat(document.getElementById('diam42').value);
+  if([q40,p40,q41,p41,q42,p42,k40d,k41d,k42d].some(isNaN))return;
+  const p={xl:gv('xl'),hh:gv('hh'),hd:gv('hd'),s:gv('s'),wy:gv('wy'),wc:gv('wc'),
+    mm:gv('mm'),mo:gv('mo'),so:gv('so'),ui:document.getElementById('ui').value,
+    v:gv('v'),zl:gv('zl'),zm:gv('zm'),q40,p40,q41,p41,q42,p42,k40d,k41d,k42d,sf};
+  let r;try{r=calcAll(p)}catch(e){return;}
+
+  document.getElementById('grade-label').textContent='必要安全率 '+sf+'（巻上索・横行索）';
+  [['AL',r.al],['YL',r.yl],['QN',r.QN],['QE',r.QE],
+   ['W1',r.w1],['W2',r.w2],['W3',r.w3],['QV',r.qv],
+   ['WS',r.ws],['PT',r.pt],['XN',r.xn],['RO',r.ro],
+   ['GS',r.gs],['SS',r.ss],['SA',r.sa],['ZA',r.za],
+   ['TM',r.tm],['TOO',r.too],['ZS',r.zs],['TS',r.ts],
+   ['SB',r.sb],['ZB',r.zb],['TSB',r.tsb],['TO',r.to],
+   ['BT',r.bt],['TP',r.tp],['TR',r.tr],['KWH',r.kwH],['KWT',r.kwT]
+  ].forEach(([k,v])=>setR('r'+k,v));
+
+  const mx=8;
+  [[r.y18,2.7,'18'],[r.y32,sf,'32'],[r.y45,sf,'45']].forEach(([y,th,bi])=>{
+    const ok=y>th;
+    document.getElementById('b'+bi).textContent=y.toFixed(4)+' '+(ok?'✓ OK':'✗ OUT');
+    document.getElementById('b'+bi).className='sf-badge '+(ok?'sf-ok':'sf-out');
+    setBar(document.getElementById('bf'+bi),document.getElementById('bm'+bi),document.getElementById('bml'+bi),y,th,mx);
+    document.getElementById('nr'+bi).style.background=ok?'#e6f4ea':'#fce8e6';
+    document.getElementById('nv'+bi).textContent=y.toFixed(4);
+    document.getElementById('nv'+bi).style.color=ok?'#1a6b1a':'#cc0000';
+  });
+  sfChart.data.datasets[0].data=[r.y18,r.y32,r.y45];
+  sfChart.data.datasets[0].backgroundColor=[
+    r.y18>2.7?'#1a6b1a':'#cc0000',
+    r.y32>sf?'#1a6b1a':'#cc0000',
+    r.y45>sf?'#1a6b1a':'#cc0000'];
+  sfChart.update();
+  const allOk=r.y18>2.7&&r.y32>sf&&r.y45>sf;
+  const vd=document.getElementById('verd');
+  vd.textContent=allOk?'✓ 全項目 OK':'✗ NG あり — 要確認';
+  vd.className='verdict '+(allOk?'v-ok':'v-out');
+}
+
+// JSON の data キーは "12.0" のような文字列。
+// parseFloat で取得した d=12 と直接マッチしないため
+// parseFloat(key)===d で検索するヘルパーを使う。
+function lookupRow(db, d){
+  if(!db||!db.data)return undefined;
+  const key=Object.keys(db.data).find(k=>parseFloat(k)===d);
+  return key!==undefined?db.data[key]:undefined;
+}
+
+// ── ロープセレクタ（径→構成→種別 連動）──────────────────
+function setupRope(n,defDiam,defConst,defKind){
+  const diamSel=document.getElementById('diam'+n);
+  const constSel=document.getElementById('const'+n);
+  const kindSel=document.getElementById('kind'+n);
+  const qIn=document.getElementById('q'+n);
+  const pIn=document.getElementById('p'+n);
+  const spec=document.getElementById('spec'+n);
+  const warn=document.getElementById('warn'+n);
+
+  // ① 全径をドロップダウンに追加
+  ALL_DIAMS.forEach(d=>{
+    const o=document.createElement('option');
+    o.value=d; o.textContent=d+'mm';
+    if(d===defDiam)o.selected=true;
+    diamSel.appendChild(o);
+  });
+
+  // ② 径→構成リストを更新
+  function refreshConst(){
+    const d=parseFloat(diamSel.value);
+    constSel.innerHTML='';
+    const available=Object.keys(ROPE_DB).filter(c=>{
+      const row=lookupRow(ROPE_DB[c],d);
+      // データがあり、かつ少なくとも1種別が null でない
+      return row && Object.entries(row).some(([k,v])=>k!=='単重'&&v!==null);
+    });
+    if(available.length===0){
+      const o=document.createElement('option');
+      o.textContent='（この径の構成なし）';constSel.appendChild(o);
+    } else {
+      available.forEach(c=>{
+        const o=document.createElement('option');
+        o.value=c; o.textContent=c;
+        if(c===defConst)o.selected=true;
+        constSel.appendChild(o);
+      });
+    }
+    refreshKind();
+  }
+
+  // ③ 構成→種別リストを更新
+  function refreshKind(){
+    const d=parseFloat(diamSel.value);
+    const c=constSel.value;
+    kindSel.innerHTML='';
+    if(!ROPE_DB[c]){refreshValues();return;}
+    const row=lookupRow(ROPE_DB[c],d);
+    const kinds=row?Object.entries(row)
+      .filter(([k,v])=>k!=='単重'&&v!==null)
+      .map(([k])=>k):[];
+    if(kinds.length===0){
+      const o=document.createElement('option');
+      o.textContent='（データなし）';kindSel.appendChild(o);
+    } else {
+      kinds.forEach(k=>{
+        const o=document.createElement('option');
+        o.value=k; o.textContent=KIND_LABEL[k]||k;
+        if(k===defKind)o.selected=true;
+        kindSel.appendChild(o);
+      });
+    }
+    refreshValues();
+  }
+
+  // ④ 値を自動反映
+  function refreshValues(){
+    const d=parseFloat(diamSel.value);
+    const c=constSel.value;
+    const k=kindSel.value;
+    warn.textContent='';
+    const db=ROPE_DB[c];
+    if(!db){spec.textContent='—';qIn.value='';pIn.value='';return;}
+    const row=lookupRow(db,d);
+    if(!row){warn.textContent='この径のデータがありません';spec.textContent='—';qIn.value='';pIn.value='';return;}
+    const bl=row[k],sw=row['単重'];
+    if(bl===null||bl===undefined){
+      warn.textContent=(KIND_LABEL[k]||k)+'はこの組み合わせで #N/A です';
+      spec.textContent=c+' φ'+d+'mm — 破断荷重データなし';
+      qIn.value=sw!==null&&sw!==undefined?sw:'';
+      pIn.value='';
+    } else {
+      qIn.value=sw!==null&&sw!==undefined?sw:'';
+      pIn.value=bl;
+      spec.textContent=c+' φ'+d+'mm '+(KIND_LABEL[k]||k)+'\n破断荷重 '+bl+' ton　単重 '+(sw!==null&&sw!==undefined?sw:'—')+' kg/m';
+    }
+    update();
+  }
+
+  diamSel.addEventListener('change',refreshConst);
+  constSel.addEventListener('change',()=>{refreshKind();});
+  kindSel.addEventListener('change',refreshValues);
+
+  // 初期化
+  refreshConst();
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  initTabs();
+  initChart();
+  // 一般入力の変更検知
+  document.querySelectorAll('#xl,#hh,#hd,#s,#wy,#wc,#mm,#mo,#so,#v,#zl,#zm').forEach(el=>{
+    el.addEventListener('input',update);
+  });
+  document.getElementById('grade').addEventListener('change',update);
+  document.getElementById('ui').addEventListener('change',update);
+  // ロープセレクタ初期化（径,構成,種別 の既定値）
+  setupRope('40',28,'6*7','A');
+  setupRope('41',12,'6*19','A');
+  setupRope('42',14,'6*19','A');
+});
+
+</script>
+
+
+
+</body>
+</html>
