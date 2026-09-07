@@ -34,6 +34,7 @@ self.addEventListener('activate', (event) => {
 });
 
 // フェッチ時: キャッシュ優先、なければネット取得
+// Fetch時はキャッシュを優先し、なければネットワークから取得
 self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request).then((cached) => {

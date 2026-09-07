@@ -1,7 +1,7 @@
 {
   "name": "ケーブルクレーン安全率チェッカー",
-  "short_name": "クレーン計算",
-  "description": "ケーブルクレーンの主索・巻上索・横行索の安全率をリアルタイムで確認できる計算ツール",
+  "short_name": "クレーン検査",
+  "description": "ケーブルクレーンの安全率を確認できる計算ツール",
   "start_url": "./cable_crane_checker.html",
   "display": "standalone",
   "orientation": "portrait-primary",
