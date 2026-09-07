@@ -121,14 +121,17 @@ body{overflow:hidden}
   <div class="field"><label>揚程 HD</label><div class="field-row"><input type="number" id="hd" value="22" step="1"><span class="unit">m</span></div></div>
   <div class="field"><label>中央垂下比 S</label><div class="field-row"><input type="number" id="s" value="0.06" step="0.01"></div></div>
   <div class="sh">荷重</div>
-  <div class="field"><label>吊上げ荷重 WY</label><div class="field-row"><input type="number" id="wy" value="2.9" step="0.1"><span class="unit">ton</span></div></div>
-  <div class="field"><label>フック重量 WC</label><div class="field-row"><input type="number" id="wc" value="0.1" step="0.1"><span class="unit">ton</span></div></div>
+  <div class="field"><label>定格荷重 WW</label><div class="field-row"><input type="number" id="ww" value="2.55" step="0.1"><span class="unit">ton</span></div></div>
+  <div class="field"><label>フック重量 WL</label><div class="field-row"><input type="number" id="wl" value="0.35" step="0.1"><span class="unit">ton</span></div></div>
+  <div class="field"><label>吊上げ荷重 WY（自動）</label><div class="field-row"><input class="auto-field" type="number" id="wy" value="2.9" readonly><span class="unit">ton</span></div></div>
+  <div class="field"><label>キャレージ重量 WC</label><div class="field-row"><input type="number" id="wc" value="0.1" step="0.1"><span class="unit">ton</span></div></div>
   <div class="sh">ウインチ・索条件</div>
   <div class="field"><label>巻掛数 MM</label><div class="field-row"><input type="number" id="mm" value="2" step="1" min="1"></div></div>
   <div class="field"><label>横行索巻掛数 MO</label><div class="field-row"><input type="number" id="mo" value="1" step="1" min="1"></div></div>
   <div class="field"><label>横行索垂下比 SO</label><div class="field-row"><input type="number" id="so" value="0.06" step="0.01"></div></div>
   <div class="field"><label>ウインチ位置</label><select id="ui"><option>上部</option><option>下部</option></select></div>
-  <div class="field"><label>横行速度 V</label><div class="field-row"><input type="number" id="v" value="80" step="1"><span class="unit">m/min</span></div></div>
+  <div class="field"><label>巻上速度 VM</label><div class="field-row"><input type="number" id="vm" value="40" step="1"><span class="unit">m/min</span></div></div>
+  <div class="field"><label>横行速度 VO</label><div class="field-row"><input type="number" id="vo" value="80" step="1"><span class="unit">m/min</span></div></div>
   <div class="field"><label>摩擦係数 ZL</label><div class="field-row"><input type="number" id="zl" value="0.05" step="0.01"></div></div>
   <div class="field"><label>機械効率 ZM</label><div class="field-row"><input type="number" id="zm" value="0.64" step="0.01"></div></div>
   <div class="sh">主索</div>
@@ -170,6 +173,10 @@ body{overflow:hidden}
       <div class="rrow"><span class="rl">斜距離 YL</span><span class="rv" id="rYL">-</span><span class="ru">m</span></div>
       <div class="rrow"><span class="rl">作業時 QN</span><span class="rv" id="rQN">-</span><span class="ru">kg/m²</span></div>
       <div class="rrow"><span class="rl">停止時 QE</span><span class="rv" id="rQE">-</span><span class="ru">kg/m²</span></div>
+      <div class="rrow rhl"><span class="rl">定格荷重 WW</span><span class="rv" id="rWW">-</span><span class="ru">ton</span></div>
+      <div class="rrow rhl"><span class="rl">フック重量 WL</span><span class="rv" id="rWL">-</span><span class="ru">ton</span></div>
+      <div class="rrow rhl"><span class="rl">吊上げ荷重 WY</span><span class="rv" id="rWY">-</span><span class="ru">ton</span></div>
+      <div class="rrow rhl"><span class="rl">キャレージ重量 WC</span><span class="rv" id="rWC">-</span><span class="ru">ton</span></div>
       <div class="rrow"><span class="rl">主索 W1</span><span class="rv" id="rW1">-</span><span class="ru">kg/m</span></div>
       <div class="rrow"><span class="rl">巻上索 W2</span><span class="rv" id="rW2">-</span><span class="ru">kg/m</span></div>
       <div class="rrow"><span class="rl">横行索 W3</span><span class="rv" id="rW3">-</span><span class="ru">kg/m</span></div>
@@ -269,7 +276,8 @@ const fnv=()=>0.98*(1-Math.pow(.98,2))/(1-.98)/2;
 const fww=(d,w,q)=>Math.sqrt(w*w+(q*1.2*d/1000)**2);
 
 function calcAll(p){
-  const{xl,hh,hd,s,wy,wc,mm,mo,so,ui,v,zl,zm,q40,p40,q41,p41,q42,p42,k40d,k41d,k42d,sf}=p;
+  const{xl,hh,hd,s,ww,wl,wc,mm,mo,so,ui,vm,vo,zl,zm,q40,p40,q41,p41,q42,p42,k40d,k41d,k42d,sf}=p;
+  const wy=ww+wl;
   const al=r2d(Math.atan(hh/xl)),yl=xl/Math.cos(Math.atan(hh/xl));
   const QN=fqn(hd),QE=fqe(hd),NV=fnv();
   const w1=fww(k40d,q40,QN),w2=fww(k41d,q41,QN),w3=fww(k42d,q42,QN);
@@ -295,9 +303,9 @@ function calcAll(p){
   const bt=r2d(Math.atan(Math.tan(d2r(al))+(f2-f1)));
   const tp=(wy+wc)*Math.sin(d2r(bt))/mo,tr=(wy+wc)*zl/mo;
   const to=too+tp+tr;
-  const kwH=v*tm/(6.12*zm),kwT=v*mo*(tp+tr)/(6.12*zm);
+  const kwH=vm*mm*tm/(6.12*zm),kwT=vo*mo*(tp+tr)/(6.12*zm);
   const y18=p40/ts,y32=p41/tm,y45=p42/to;
-  return{al,yl,QN,QE,NV,w1,w2,w3,qv,ws,pt,xn,ro,gs,ss,sa,za,sb,zb,tq,tm,too,zs,ts,tsb,bt,tp,tr,to,kwH,kwT,y18,y32,y45};
+  return{al,yl,QN,QE,NV,ww,wl,wy,wc,w1,w2,w3,qv,ws,pt,xn,ro,gs,ss,sa,za,sb,zb,tq,tm,too,zs,ts,tsb,bt,tp,tr,to,kwH,kwT,y18,y32,y45};
 }
 
 const f4=v=>typeof v==='number'?v.toFixed(4):'—';
@@ -335,14 +343,16 @@ function update(){
   const k41d=parseFloat(document.getElementById('diam41').value);
   const k42d=parseFloat(document.getElementById('diam42').value);
   if([q40,p40,q41,p41,q42,p42,k40d,k41d,k42d].some(isNaN))return;
-  const p={xl:gv('xl'),hh:gv('hh'),hd:gv('hd'),s:gv('s'),wy:gv('wy'),wc:gv('wc'),
+  const p={xl:gv('xl'),hh:gv('hh'),hd:gv('hd'),s:gv('s'),ww:gv('ww'),wl:gv('wl'),wc:gv('wc'),
     mm:gv('mm'),mo:gv('mo'),so:gv('so'),ui:document.getElementById('ui').value,
-    v:gv('v'),zl:gv('zl'),zm:gv('zm'),q40,p40,q41,p41,q42,p42,k40d,k41d,k42d,sf};
+    vm:gv('vm'),vo:gv('vo'),zl:gv('zl'),zm:gv('zm'),q40,p40,q41,p41,q42,p42,k40d,k41d,k42d,sf};
   let r;try{r=calcAll(p)}catch(e){return;}
+  document.getElementById('wy').value=r.wy.toFixed(3);
 
   document.getElementById('grade-label').textContent='必要安全率 '+sf+'（巻上索・横行索）';
   [['AL',r.al],['YL',r.yl],['QN',r.QN],['QE',r.QE],
-   ['W1',r.w1],['W2',r.w2],['W3',r.w3],['QV',r.qv],
+  ['WW',r.ww],['WL',r.wl],['WY',r.wy],['WC',r.wc],
+  ['W1',r.w1],['W2',r.w2],['W3',r.w3],['QV',r.qv],
    ['WS',r.ws],['PT',r.pt],['XN',r.xn],['RO',r.ro],
    ['GS',r.gs],['SS',r.ss],['SA',r.sa],['ZA',r.za],
    ['TM',r.tm],['TOO',r.too],['ZS',r.zs],['TS',r.ts],
@@ -500,7 +510,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   initTabs();
   initChart();
   // 一般入力の変更検知
-  document.querySelectorAll('#xl,#hh,#hd,#s,#wy,#wc,#mm,#mo,#so,#v,#zl,#zm').forEach(el=>{
+  document.querySelectorAll('#xl,#hh,#hd,#s,#ww,#wl,#wc,#mm,#mo,#so,#vm,#vo,#zl,#zm').forEach(el=>{
     el.addEventListener('input',update);
   });
   document.getElementById('grade').addEventListener('change',update);
